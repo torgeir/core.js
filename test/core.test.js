@@ -48,7 +48,7 @@ TestCase('Core', sinon.testCase({
       sandbox.on('some channel', spy);
     });
     Core.register('module broadcasting on sandbox', function (sandbox) {
-      sandbox.emitSync('some channel');
+      sandbox.emit('some channel');
     });
     Core.startAll();
     sinon.assert.calledOnce(spy);
