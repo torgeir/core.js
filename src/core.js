@@ -1,9 +1,24 @@
 (function () {
 
+  function delegate (fn) {
+    return function () {
+      fn.apply(this, arguments);
+    };
+  }
+
+  function delegateMethods(from, to) {
+    var key;
+    for (key in from) {
+      if (from.hasOwnProperty(key)) {
+        to[key] = delegate(from[key]);
+      }
+    }
+  }
+
   /**
-   * Log
+   * Logger
    */
-  var Log = (function() {
+  var Logger = (function() {
     
     var hasConsole = typeof console === 'function';
 
@@ -11,13 +26,28 @@
       hasConsole && console.log && console.log.apply(console, arguments);
     }
 
+    function warn () {
+      hasConsole && console.warn && console.warn.apply(console, arguments);
+    }
+
     function err () {
       hasConsole && console.err && console.err.apply(console, arguments);
     }
 
+    function create (baseLogger) {
+      var logger = {};
+      
+      logger.log = delegate(log);
+      logger.warn = delegate(warn);
+      logger.err = delegate(err);
+
+      delegateMethods(baseLogger, logger);
+
+      return logger;
+    }
+
     return {
-      log: log
-    , err: err
+      create: create
     };
 
   })();
@@ -27,26 +57,16 @@
    */
   var Sandbox = (function() {
     
-    function delegate (fn) {
-      return function () {
-        fn.apply(this, arguments);
-      };
-    }
-
-    function create (base) {
-      var key
-        , sandbox = {};
+    function create (baseLogger, baseSandbox) {
+      var sandbox = {};
      
       sandbox.emit = delegate(PubSub.publish);
       sandbox.emitSync = delegate(PubSub.publishSync);
       sandbox.on = delegate(PubSub.subscribe);
       sandbox.off = delegate(PubSub.unsubscribe);
 
-      for (key in base) {
-        if (base.hasOwnProperty(key)) { 
-          sandbox[key] = delegate(base[key]);
-        }
-      }
+      delegateMethods(baseLogger, sandbox);
+      delegateMethods(baseSandbox, sandbox);
 
       return sandbox;
     }
@@ -64,6 +84,7 @@
 
     var initialized
       , modules = {}
+      , baseLogger = {}
       , baseSandbox = {}
       ;
 
@@ -74,13 +95,14 @@
           return;
         }
         initialized = true;
-        callback && callback(baseSandbox);
+        callback && callback(baseLogger, baseSandbox);
       },
 
       reset: function () {
         this.stopAll();
         initialized = false;  
         modules = {};
+        baseLogger = {};
         baseSandbox = {};
       },
 
@@ -94,7 +116,9 @@
       start: function (moduleId) {
         var instance, module = modules[moduleId];
         if (module) {
-            instance = module.instance = module.creator(Sandbox.create(baseSandbox));
+            var logger = Logger.create(baseLogger);
+            var sandbox = Sandbox.create(logger, baseSandbox);
+            instance = module.instance = module.creator(sandbox);
             instance && instance.init && instance.init();
         }
       },

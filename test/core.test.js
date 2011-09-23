@@ -54,7 +54,20 @@ TestCase('Core', sinon.testCase({
     sinon.assert.calledOnce(spy);
   },
 
-  /*
+  'test should expose log, warn, err on sandbox': function () {
+    Core.reset();
+    var log, warn, err;
+    Core.register('some module', function (sandbox) {
+      log = sandbox.log; 
+      warn = sandbox.warn; 
+      err = sandbox.err; 
+    });
+    Core.startAll();
+    assertTrue(typeof log == 'function');
+    assertTrue(typeof warn == 'function');
+    assertTrue(typeof err == 'function');
+  },
+    
   'test should allow logger overrides': function () {
     var spy = sinon.spy(); 
     Core.reset();
@@ -67,12 +80,11 @@ TestCase('Core', sinon.testCase({
     Core.startAll();
     sinon.assert.calledOnce(spy);
   },
-  */
-    
+
   'test should allow sandbox overrides': function () {
     var spy = sinon.spy();
     Core.reset();
-    Core.init(function (sandbox) {
+    Core.init(function (logger, sandbox) {
       sandbox.someOverride = spy;
     });
     Core.register('module using custom sandbox', function (sandbox) {
