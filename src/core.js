@@ -7,10 +7,17 @@
   }
 
   function delegateMethods(from, to) {
-    var key;
+    var key, property;
     for (key in from) {
       if (from.hasOwnProperty(key)) {
-        to[key] = delegate(from[key]);
+        property = from[key];
+        if (typeof property === 'function') {
+          to[key] = delegate(property);
+        }
+        else {
+          to[key] = {};
+          delegateMethods(property, to[key]);
+        }
       }
     }
   }

@@ -131,6 +131,36 @@ TestCase('Core - Sandbox', sinon.testCase({
     });
     Core.startAll();
     sinon.assert.notCalled(spy);
+  }, 
+  
+  'test should allow namespaced sandbox overrides': function () {
+    var spy = sinon.spy();
+    Core.reset();
+    Core.init(function (logger, sandbox) {
+      sandbox.dom = {};
+      sandbox.dom.find = spy;
+    });
+    Core.register('module using sandbox with namespaced methods', function (sandbox) {
+      sandbox.dom.find();
+    });
+    Core.startAll();
+    sinon.assert.calledOnce(spy);
+  },
+
+  'test sandboxes have independent namespaced methods': function () {
+    var spy = sinon.spy();
+    Core.reset();
+    Core.init(function (logger, sandbox) {
+      sandbox.dom = {};
+    });
+    Core.register('module changing namespace member', function (sandbox) {
+      sandbox.dom.find = spy;
+    });
+    Core.register('module using changed namespace member', function (sandbox) {
+      sandbox.dom.find && sandbox.dom.find();
+    });
+    Core.startAll();
+    sinon.assert.notCalled(spy);
   }
 
 }));
