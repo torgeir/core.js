@@ -84,18 +84,67 @@
 
     var initialized
       , modules = {}
+      , logger = {}
       , baseLogger = {}
       , baseSandbox = {}
       ;
 
+    function createModule (module) {
+      var instance
+        , sandbox = Sandbox.create(Logger.create(baseLogger), baseSandbox);
+      
+      try {
+        instance = module.instance = module.creator(sandbox);
+      }
+      catch (e) {
+        logger.warn('Creating module "' + module.id + '" failed with: ' + e);
+      }
+
+      return instance;
+    }
+
+    function initModule (module) {
+      var instance = module.instance;
+
+      try {
+        instance && instance.init && instance.init();
+      }
+      catch (e) {
+        logger.warn('Initializing module "' + module.id + '" failed with: ' + e);
+      }
+    }
+
+    function destroyModule (module) {
+      var instance = module.instance;
+
+      try {
+        instance && instance.destroy && instance.destroy();
+      }
+      catch (e) {
+        logger.warn('Destroying module "' + module.id + '" failed with: ' + e);
+      }
+
+      module.instance = undefined;
+    }
+
+    function attachWindowErrorHandler (logger) {
+      window.onerror = function (msg, url, line) {
+        logger.err(msg + ', url: ' + url + ', line: ' + line);
+      };
+    }
+    
     return {
 
       init: function (callback) {
         if (initialized) {
           return;
         }
+
         initialized = true;
         callback && callback(baseLogger, baseSandbox);
+        logger = Logger.create(baseLogger);
+
+        attachWindowErrorHandler(logger);
       },
 
       reset: function () {
@@ -104,31 +153,29 @@
         modules = {};
         baseLogger = {};
         baseSandbox = {};
+        window.onerror = undefined;
       },
 
       register: function (moduleId, creator) {
         modules[moduleId] = {
-          creator: creator
+          id: moduleId
+        , creator: creator
         , instance: undefined
         };
       },
 
       start: function (moduleId) {
-        var instance, module = modules[moduleId];
+        var module = modules[moduleId];
         if (module) {
-            var logger = Logger.create(baseLogger);
-            var sandbox = Sandbox.create(logger, baseSandbox);
-            instance = module.instance = module.creator(sandbox);
-            instance && instance.init && instance.init();
+          createModule(module);
+          initModule(module);
         }
       },
 
       stop: function (moduleId) {
-        var instance, module = modules[moduleId];
+        var module = modules[moduleId];
         if (module) {
-          instance = module.instance;
-          instance && instance.destroy && instance.destroy();
-          module.instance = undefined;
+          destroyModule(module);
         }
       },
 
@@ -153,9 +200,5 @@
     };
 
   })();
-
-  window.onerror = function (msg, url, line) {
-    Log.err(msg);
-  };
 
 })();
