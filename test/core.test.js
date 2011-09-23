@@ -1,21 +1,3 @@
-TestCase('Object', sinon.testCase({
-
-  'test create() should exist' : function () {
-    assertFunction(Object.create);
-  },
-
-  'test create() should return obj that inherits argument': function () {
-    var parent = { someFunction: function () {} };
-    assertFunction(Object.create(parent).someFunction);
-  },
-
-  'test freeze() should exist' : function () {
-    assertFunction(Object.freeze);
-  }
-
-}));
-
-
 TestCase('Core', sinon.testCase({
 
   setUp: function () {
@@ -25,10 +7,6 @@ TestCase('Core', sinon.testCase({
     Core.register('a module', function () {
       return { init: initSpy , destroy: destroySpy };
     });
-  },
-
-  tearDown: function () {
-    Core.reset();  
   },
 
   'test should initialize module': function () {
@@ -63,25 +41,9 @@ TestCase('Core', sinon.testCase({
     sinon.assert.calledOnce(anotherDestroySpy);
   },
 
-  'test should allow sandbox overrides': function () {
-    var spy = sinon.spy();
-    Core.reset();
-    Core.init(function (Sandbox) {
-      Sandbox.prototype.someOverride = spy;
-    });
-    Core.register('module using custom sandbox', function (sandbox) {
-      sandbox.someOverride();
-    });
-    Core.startAll();
-    sinon.assert.calledOnce(spy);
-  }
-
-}));
-
-TestCase('Sandbox', sinon.testCase({
-
   'test should call subscribers': function () {
     var spy = sinon.spy();
+    Core.reset();
     Core.register('module listening on sandbox', function (sandbox) {
       sandbox.on('some channel', spy);
     });
@@ -90,6 +52,47 @@ TestCase('Sandbox', sinon.testCase({
     });
     Core.startAll();
     sinon.assert.calledOnce(spy);
+  },
+
+  /*
+  'test should allow logger overrides': function () {
+    var spy = sinon.spy(); 
+    Core.reset();
+    Core.init(function (logger, sandbox) {
+      logger.err = spy;
+    });
+    Core.register('module using custom logger', function (sandbox) {
+      sandbox.err(); 
+    });
+    Core.startAll();
+    sinon.assert.calledOnce(spy);
+  },
+  */
+    
+  'test should allow sandbox overrides': function () {
+    var spy = sinon.spy();
+    Core.reset();
+    Core.init(function (sandbox) {
+      sandbox.someOverride = spy;
+    });
+    Core.register('module using custom sandbox', function (sandbox) {
+      sandbox.someOverride();
+    });
+    Core.startAll();
+    sinon.assert.calledOnce(spy);
+  },
+
+  'test sandboxes are independent': function () {
+    var spy = sinon.spy();
+    Core.reset();
+    Core.register('module that tries to change sandbox', function (sandbox) {
+      sandbox.someFunc = spy;
+    });
+    Core.register('module that tries to call changed sandbox', function (sandbox) {
+      sandbox.someFunc && sandbox.someFunc();
+    });
+    Core.startAll();
+    sinon.assert.notCalled(spy);
   }
 
 }));

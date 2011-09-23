@@ -1,127 +1,18 @@
-(function (global) {
-
-  /**
-   * Polyfills
-   */
-  if (!Object.create) {
-    Object.create = (function () {
-
-      function F() {}
-
-      return function (proto) {
-        if (arguments.length > 1) {
-          throw new Error('Object.create takes one argument.');
-        }
-        F.prototype = proto;
-        return new F();
-      };
-
-    })();
-  }
-
-  if (!Object.freeze) {
-    Object.freeze = Object.create;
-  }
-
-  function throwNotImplemented () {
-    throw "not implemented";
-  }
-
-  /**
-   * Dom
-   */
-  var Dom = (function () {
-
-    function get () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function on () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function off () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function html () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function text () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function css () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function hasClass () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function addClass () {
-      throwNotImplemented();
-      return this;
-    }
-
-    function removeClass () {
-      throwNotImplemented();
-      return this;
-    }
-
-    return {
-      get: get
-    , on: on
-    , off: off
-    , html: html
-    , text: text
-    , css: css
-    , hasClass: hasClass
-    , addClass: addClass
-    , removeClass: removeClass
-    };
-
-  })();
-
-  /**
-   * Ajax
-   */
-  var Ajax = (function() {
-
-    function json () {
-      throwNotImplemented();
-    }
-
-    function xml () {
-      throwNotImplemented();
-    }
-
-    return {
-      json: json
-    , xml: xml
-    };
-
-  })();
+(function () {
 
   /**
    * Log
    */
   var Log = (function() {
+    
+    var hasConsole = typeof console === 'function';
 
     function log () {
-      throwNotImplemented();
+      hasConsole && console.log && console.log.apply(console, arguments);
     }
 
     function err () {
-      throwNotImplemented();
+      hasConsole && console.err && console.err.apply(console, arguments);
     }
 
     return {
@@ -134,45 +25,47 @@
   /**
    * Sandbox
    */
-  function Sandbox () { }
-  Sandbox.prototype.on = PubSub.subscribe;
-  Sandbox.prototype.off = PubSub.unsubscribe;
-  Sandbox.prototype.emit = PubSub.publish;
-  Sandbox.prototype.emitSync = PubSub.publishSync;
-  Sandbox.prototype.dom = Object.create(Dom);
-  Sandbox.prototype.ajax = Object.create(Ajax);
-  Sandbox.prototype.log = Object.create(Log);
+  var Sandbox = (function() {
+    
+    function delegate (fn) {
+      return function () {
+        fn.apply(this, arguments);
+      };
+    }
+
+    function create (base) {
+      var key
+        , sandbox = {};
+     
+      sandbox.emit = delegate(PubSub.publish);
+      sandbox.emitSync = delegate(PubSub.publishSync);
+      sandbox.on = delegate(PubSub.subscribe);
+      sandbox.off = delegate(PubSub.unsubscribe);
+
+      for (key in base) {
+        if (base.hasOwnProperty(key)) { 
+          sandbox[key] = delegate(base[key]);
+        }
+      }
+
+      return sandbox;
+    }
+
+    return {
+      create: create
+    };
+
+  })();
 
   /**
    * Core
    */
-  var Core = global.Core = (function () {
+  var Core = window.Core = (function () {
 
     var initialized
-      , modules = {};
-
-    /*
-    function createModule (id) {
-      var name
-        , method
-        , instance = modules[id].creator(sandbox);
-
-      for (name in instance) {
-        method = instance[name];
-
-        if (typeof method === 'function') {
-          instance[name] = (function (name, method) {
-            return function () {
-              try { return method.apply(this, arguments); }
-              catch (ex) { log('method "' + name + '" threw: ' + ex.message); }
-            };
-          })(name, method);
-        }
-      }
-
-      return instance;
-    }
-    */
+      , modules = {}
+      , baseSandbox = {}
+      ;
 
     return {
 
@@ -181,12 +74,14 @@
           return;
         }
         initialized = true;
-        callback && callback(Sandbox);
+        callback && callback(baseSandbox);
       },
 
       reset: function () {
+        this.stopAll();
         initialized = false;  
         modules = {};
+        baseSandbox = {};
       },
 
       register: function (moduleId, creator) {
@@ -199,12 +94,8 @@
       start: function (moduleId) {
         var instance, module = modules[moduleId];
         if (module) {
-          try {
-            instance = module.instance = module.creator(new Sandbox());
+            instance = module.instance = module.creator(Sandbox.create(baseSandbox));
             instance && instance.init && instance.init();
-          } catch (ex) {
-            console.log(ex)
-          }
         }
       },
 
@@ -239,4 +130,8 @@
 
   })();
 
-})(window);
+  window.onerror = function (msg, url, line) {
+    Log.err(msg);
+  };
+
+})();
