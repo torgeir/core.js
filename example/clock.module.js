@@ -43,7 +43,7 @@
         }
       },
       destroy: function () {
-        var i;
+        var i, len;
         for (i = 0, len = clocks.length; i < len; i += 1) {
           clocks[i].stop();
         }

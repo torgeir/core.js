@@ -1,8 +1,9 @@
 (function () {
+  'use strict'
 
   function delegate (fn) {
     return function () {
-      fn.apply(this, arguments);
+      return fn.apply(this, arguments);
     };
   }
 
@@ -27,7 +28,7 @@
    */
   var Logger = (function() {
     
-    var hasConsole = typeof console === 'function';
+    var hasConsole = typeof console !== 'undefined';
 
     function log () {
       hasConsole && console.log && console.log.apply(console, arguments);

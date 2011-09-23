@@ -1,21 +1,28 @@
 (function () {
 
   function log (what) {
-    typeof console !== 'undefined' && console.log && console.log(what);
+    console.log('Custom logger says:');
+    console.log('> ' + what);
   }
 
   function html (el, content) {
     el.innerHTML = content;
-  };
+  }
 
   function get (selector) {
     return $(selector);
-  };
+  }
 
-  Core.init(function (Sandbox) {
-    Sandbox.prototype.log = log;
-    Sandbox.prototype.dom.html = html;
-    Sandbox.prototype.dom.get = get
+  Core.init(function (logger, sandbox) {
+
+    /* Override default logger methods */
+    logger.log = log;
+
+    /* Override default sandbox methods */
+    sandbox.dom = {
+      get: get
+    , html: html
+    };
   });
 
 })();
