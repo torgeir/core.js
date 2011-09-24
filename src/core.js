@@ -1,9 +1,9 @@
 (function () {
   'use strict'
 
-  function delegate (fn) {
+  function delegate (fn, scope) {
     return function () {
-      return fn.apply(this, arguments);
+      return fn.apply(scope || this, arguments);
     };
   }
 
@@ -13,7 +13,7 @@
       if (from.hasOwnProperty(key)) {
         property = from[key];
         if (typeof property === 'function') {
-          to[key] = delegate(property);
+          to[key] = delegate(property, from);
         }
         else {
           to[key] = {};
@@ -74,9 +74,9 @@
     function create (baseLogger, baseSandbox) {
       var sandbox = {};
      
-      sandbox.emit = delegate(PubSub.publish);
-      sandbox.on = delegate(PubSub.subscribe);
-      sandbox.off = delegate(PubSub.unsubscribe);
+      sandbox.emit = function (ev, data) { return PubSub.publish(ev, [data]); };
+      sandbox.on = delegate(PubSub.subscribe, PubSub);
+      sandbox.off = delegate(PubSub.unsubscribe, PubSub);
 
       delegateMethods(baseLogger, sandbox);
       delegateMethods(baseSandbox, sandbox);
@@ -89,6 +89,7 @@
     };
 
   })();
+
 
   /**
    * Core
